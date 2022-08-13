@@ -19,6 +19,8 @@ void setup() {
   #endif
 
   myServo.attach(SERVO_CONTROL_PIN); // attaches the servo on pin 9 to the servo object
+   myServo.write(90);
+
 }  
 
 
@@ -29,15 +31,16 @@ void loop() {
   if(input_newSerialCommandAvailable() ) {
      String command=input_getSerialCommand();
      inputNumber = command.toInt();
-    if(inputNumber>=0 && inputNumber<10) angle=inputNumber*19;
+    if(inputNumber>=0 && inputNumber<10) angle=max(inputNumber*20-1,0)  ;
     // print out the angle for the servo motor
     Serial.print("angle: ");
     Serial.println(angle);
+     myServo.write(angle);
   }    
 
 
   // set the servo position
-  myServo.write(angle);
+ 
 
   // wait for the servo to get there
   delay(15);
