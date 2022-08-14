@@ -5,14 +5,15 @@
 // Activate general trace output
 
 #ifdef TRACE_ON
-#define TRACE_INPUT 1
-//#define TRACE_INPUT_HIGH 1
-#define TRACE_INPUT_traceValue_acceleration
+#define TRACE_INPUT_EVENTS 
+//#define TRACE_INPUT_HIGH 
 #endif
 
 
 #define PORT_STEP_BUTTON 6
 
+/* general variables of the input module */
+bool input_enabled=true;
 
 /* TM1638 Button management variables */
 
@@ -39,7 +40,37 @@ void input_setup(TM1638plus *buttonModuleToUse) {
 }
 
 
-/* ---- Serial Data Input ---- */
+/* -------- Button query functions ----------- */
+
+bool input_moduleButtonGotPressed(byte buttonIndex)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && bitRead(buttons_gotPressed_flag, buttonIndex)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled button got pressed for "));
+         Serial.println(buttonIndex);
+    }
+  #endif
+  return input_enabled && bitRead(buttons_gotPressed_flag, buttonIndex); 
+}
+
+bool input_moduleButtonIsPressed(byte buttonIndex)
+{
+  return input_enabled && bitRead(buttons_current_state,buttonIndex);
+}
+
+bool input_moduleButtonGotReleased(byte buttonIndex)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && bitRead(buttons_gotReleased_flag, buttonIndex)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled button got released for "));
+         Serial.println(buttonIndex);
+    }
+  #endif
+  return input_enabled && bitRead(buttons_gotReleased_flag,buttonIndex); 
+}
+
+
+/* ---- Serial Data Input function ---- */
 
 boolean input_newSerialCommandAvailable() {return input_serialCommand_isNew;}
 
@@ -49,7 +80,14 @@ String input_getSerialCommand()
     return input_currentSerialCommand;
 }
 
-/* ---- Serial Data Input ---- */
+/* Input Utility functions */
+void input_ignoreUntilRelease()
+{
+  input_enabled=false;
+}
+
+
+/* ---- Serial Data Input  polling (must be called by loop) ---- */
 
 
 void input_pollSerial() {
@@ -73,13 +111,26 @@ void input_pollSerial() {
 }
 
 void input_switches_scan_tick() {
-   /* capture buttonsModule states, prevent bouncing with simple cooldown  */
+  // capture buttonsModule states, prevent bouncing with simple cooldown  
   buttons_last_state = buttons_current_state;
   if (millis() - buttons_last_read_time > BUTTON_MODULE_COOLDOWN_MS)
   {
     buttons_current_state = buttonModule->readButtons();
     buttons_last_read_time = millis();
   }
+  // derive state change information for the button module 
+  buttons_gotPressed_flag = (buttons_last_state ^ buttons_current_state)&buttons_current_state;
+  buttons_gotReleased_flag = (buttons_last_state ^ buttons_current_state) & ~buttons_current_state;
+
+  // When all buttons are released, enable input 
+  if(buttons_current_state==0)  input_enabled=true;
+
+  #ifdef TRACE_INPUT_EVENTS
+    if(buttons_gotPressed_flag) {
+         Serial.print(F("TRACE_INPUT_EVENTS buttons_gotPressed_flag:"));Serial.println(buttons_gotPressed_flag,HEX);}
+    if(buttons_gotReleased_flag) {
+         Serial.print(F("TRACE_INPUT_EVENTS buttons_gotReleased_flag:"));Serial.println(buttons_gotReleased_flag,HEX);}
+  #endif
 }
 
 

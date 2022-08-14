@@ -5,6 +5,11 @@
 #include <Servo.h>
 #include <TM1638plus.h>
 
+#ifdef TRACE_ON
+#define TRACE_MODES 
+//#define TRACE_INPUT_HIGH 
+#endif
+
 #define SERVO_CONTROL_PIN 9
 
 enum PROCESS_MODES {
@@ -23,7 +28,15 @@ Servo myServo;  // create a servo object
 TM1638plus ledAndKeymodule(2, 3, 4);  // the led+keys module is input and output, so core must own it
 
 
+// Variable for Servo control and configuration
 int g_servo_angle;   // variable to hold the g_servo_angle for the servo motor
+int g_servo_target_angle[] {0,39, 39,59, 59,79, 82,179,110,0}; // 2 angels per set: start + final
+int g_servo_transfer_time[] {500,2000,2000,10000,3500};         // milli seconds to traverse from Start to final angle
+#define SHOW_STEP_COUNT 5
+
+// Varibale for the show management
+byte g_show_step =0;
+unsigned long g_show_step_start_time=0;
 
 void setup() {
   #ifdef TRACE_ON 
@@ -37,7 +50,8 @@ void setup() {
   input_setup(&ledAndKeymodule); 
 
   myServo.attach(SERVO_CONTROL_PIN); // attaches the servo on pin 9 to the servo object
-  myServo.write(90);
+  g_servo_angle=90; // start at to middle position
+  myServo.write(g_servo_angle);
   enter_SERIAL_MODE();
 
 }  
@@ -47,16 +61,72 @@ void loop() {
 
   input_pollSerial();
 
-  input_switches_scan_tick() ;
+  input_switches_scan_tick();
 
   switch(g_process_mode) {
-    //case SHOW_MODE: process_SHOW_MODE();break;
+    case SHOW_MODE: process_SHOW_MODE();break;
     //case SET_MODE: process_SET_MODE();break;
     case SERIAL_MODE:process_SERIAL_MODE();break;
     //case TEST_MODE:process_TEST_MODE();break;
    } // switch
 
    
+}
+
+/* ======== SHOW_MODE ======== */
+
+void enter_SHOW_MODE()
+{
+   #ifdef TRACE_MODES
+      Serial.print(F("#SHOW_MODE: "));
+      Serial.print(freeMemory());
+      Serial.print(F(" bytes free memory. "));
+      Serial.print(millis()/1000);
+      Serial.println(F(" seconds uptime"));
+    #endif
+    g_process_mode=SHOW_MODE;
+    g_mode_start_time=millis();
+
+    g_show_step=0;
+    g_show_step_start_time=g_mode_start_time;
+}
+
+void process_SHOW_MODE()
+{
+
+   unsigned long time_in_step=0;
+   long angle1000s_per_ms=0;
+    
+   // Goto Serial Mode
+   if(input_moduleButtonGotPressed(0)) {
+    input_ignoreUntilRelease();
+    enter_SERIAL_MODE();
+    return;
+   }
+
+   // Step Foreward
+   if(input_moduleButtonGotPressed(3)) {  // TODO Change to Final switch button
+    if(++g_show_step >= SHOW_STEP_COUNT) g_show_step=0;
+    g_show_step_start_time=millis();
+   }
+
+   // Determine and set current angle
+   time_in_step=millis()-g_show_step_start_time;
+   if(time_in_step<g_servo_transfer_time[g_show_step]) { // calculate intermediate angle
+        angle1000s_per_ms=(((long)(g_servo_target_angle[g_show_step*2]-g_servo_target_angle[g_show_step*2+1]))<<10)/g_servo_transfer_time[g_show_step]; // Multiply by 1024 to get good resolution
+        g_servo_angle=g_servo_target_angle[g_show_step*2]-(int)((angle1000s_per_ms*time_in_step)>>10);
+   } else {
+    g_servo_angle=g_servo_target_angle[g_show_step*2+1];
+    if(g_show_step==SHOW_STEP_COUNT-1) {
+      g_show_step=0;
+      g_show_step_start_time=millis();
+      }
+   }
+
+   myServo.write(g_servo_angle);
+   
+  // display state 
+  output_render_ShowScene();
 }
 
 /* ======== SERIAL_MODE ========*/
@@ -76,11 +146,16 @@ void enter_SERIAL_MODE()
 
 void process_SERIAL_MODE()
 {
-    int inputNumber=0;
+   int inputNumber=0;
+   
    // Manage button input
-
+   if(input_moduleButtonGotPressed(7)) {
+    input_ignoreUntilRelease();
+    enter_SHOW_MODE();
+    return;
+   }
+   
    // Manage serial input
-
    if(input_newSerialCommandAvailable() ) {
      String command=input_getSerialCommand();
      inputNumber = command.toInt();
@@ -92,7 +167,7 @@ void process_SERIAL_MODE()
   }   
    
    // Finally display state 
-
+  output_render_SerialScene();
 }
 
 
