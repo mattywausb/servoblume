@@ -16,7 +16,7 @@
 
 /* TM1638 Button management variables */
 
-TM1638lite *buttonModule;
+TM1638plus *buttonModule;
 byte buttons_current_state = 0;
 byte buttons_last_state = 0;
 byte buttons_gotPressed_flag = 0;
@@ -28,6 +28,16 @@ unsigned long buttons_last_read_time = 0;
 String input_serialBuffer="";
 String input_currentSerialCommand="";
 boolean input_serialCommand_isNew=false;
+
+/* ---------------- SETUP ----------------- */
+void input_setup(TM1638plus *buttonModuleToUse) {
+  /* Register button Module we need to ask */
+  buttonModule = buttonModuleToUse;
+
+  /* Initialize switch  */
+  pinMode(PORT_STEP_BUTTON, INPUT_PULLUP);
+}
+
 
 /* ---- Serial Data Input ---- */
 
@@ -72,10 +82,4 @@ void input_switches_scan_tick() {
   }
 }
 
-void input_setup(TM1638lite *buttonModuleToUse) {
-  /* Register button Module we need to ask */
-  buttonModule = buttonModuleToUse;
 
-  /* Initialize switch  */
-  pinMode(PORT_STEP_BUTTON, INPUT_PULLUP);
-}

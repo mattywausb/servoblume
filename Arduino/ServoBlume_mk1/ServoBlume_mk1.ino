@@ -3,7 +3,7 @@
 
 #include "mainsettings.h"
 #include <Servo.h>
-#include <TM1638lite.h>
+#include <TM1638plus.h>
 
 #define SERVO_CONTROL_PIN 9
 
@@ -20,7 +20,7 @@ unsigned long g_mode_start_time=0;
 
 
 Servo myServo;  // create a servo object
-TM1638lite ledAndKeymodule(4, 3, 2);  // the led+keys module is input and output, so core must own it
+TM1638plus ledAndKeymodule(2, 3, 4);  // the led+keys module is input and output, so core must own it
 
 
 int g_servo_angle;   // variable to hold the g_servo_angle for the servo motor
@@ -31,8 +31,9 @@ void setup() {
     Serial.begin(9600);
     Serial.println(compile_signature); 
   #endif
-
-  //output_setup(&ledAndKeymodule);
+  ledAndKeymodule.displayBegin();
+  
+  output_setup(&ledAndKeymodule);
   input_setup(&ledAndKeymodule); 
 
   myServo.attach(SERVO_CONTROL_PIN); // attaches the servo on pin 9 to the servo object
