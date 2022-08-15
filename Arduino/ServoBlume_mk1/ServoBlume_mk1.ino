@@ -30,9 +30,21 @@ TM1638plus ledAndKeymodule( 3,4,5);  // the led+keys module is input and output,
 
 // Variable for Servo control and configuration
 int g_servo_angle;   // variable to hold the g_servo_angle for the servo motor
-int g_servo_target_angle[] {0,39, 39,59, 59,79, 82,179,110,0}; // 2 angels per set: start + final
-int g_servo_transfer_time[] {500,2000,2000,10000,3500};         // milli seconds to traverse from Start to final angle
-#define SHOW_STEP_COUNT 5
+
+
+struct showStep {
+  int angle_start;
+  int angle_stop;
+  int duration; // in milliseconds
+}; 
+
+struct showStep showStepList[] = {{0,39,500},  // Start step
+                                  {39,59,2000},
+                                  {59,79,2000},
+                                  {82,179,10000},
+                                  {110,0,3500}}; 
+
+#define SHOW_STEP_COUNT (sizeof(showStepList)/sizeof(showStepList[0]))
 
 // Varibale for the show management
 byte g_show_step =0;
@@ -112,11 +124,11 @@ void process_SHOW_MODE()
 
    // Determine and set current angle
    time_in_step=millis()-g_show_step_start_time;
-   if(time_in_step<g_servo_transfer_time[g_show_step]) { // calculate intermediate angle
-        angle1000s_per_ms=(((long)(g_servo_target_angle[g_show_step*2]-g_servo_target_angle[g_show_step*2+1]))<<10)/g_servo_transfer_time[g_show_step]; // Multiply by 1024 to get good resolution
-        g_servo_angle=g_servo_target_angle[g_show_step*2]-(int)((angle1000s_per_ms*time_in_step)>>10);
+   if(time_in_step<showStepList[g_show_step].duration) { // calculate intermediate angle
+        angle1000s_per_ms=(((long)(showStepList[g_show_step].angle_start-showStepList[g_show_step].angle_stop))<<10)/showStepList[g_show_step].duration; // Multiply by 1024 to get good resolution
+        g_servo_angle=showStepList[g_show_step].angle_start-(int)((angle1000s_per_ms*time_in_step)>>10);
    } else {
-    g_servo_angle=g_servo_target_angle[g_show_step*2+1];
+    g_servo_angle=showStepList[g_show_step].angle_stop;
     if(g_show_step==SHOW_STEP_COUNT-1) {
       g_show_step=0;
       g_show_step_start_time=millis();

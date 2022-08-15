@@ -13,7 +13,7 @@ TM1638plus *output_led_module;
 void output_setup(TM1638plus *ledKeyModToUse) {
   output_led_module=ledKeyModToUse;
   output_led_module->reset();
-  output_led_module->brightness(2);
+  output_led_module->brightness(1);
   output_led_module->displayText("--------");
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, false);
