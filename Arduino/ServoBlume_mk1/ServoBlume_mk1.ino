@@ -49,6 +49,15 @@ struct showStep showStepList[] = {{0,39,500},  // Start step
 // Varibale for the show management
 byte g_show_step =0;
 unsigned long g_show_step_start_time=0;
+unsigned long g_time_in_step=0;
+
+enum EDIT_MODES {
+  EDIT_ANGLE,
+  EDIT_DURATION,
+  RUN_TEST_TO_STEP
+};
+
+EDIT_MODES g_edit_mode=EDIT_ANGLE;
 
 void setup() {
   #ifdef TRACE_ON 
@@ -101,12 +110,13 @@ void enter_SHOW_MODE()
 
     g_show_step=0;
     g_show_step_start_time=g_mode_start_time;
+    g_time_in_step=0;
 }
 
 void process_SHOW_MODE()
 {
 
-   unsigned long time_in_step=0;
+  
    long angle1000s_per_ms=0;
     
    // Goto Serial Mode
@@ -123,10 +133,10 @@ void process_SHOW_MODE()
    }
 
    // Determine and set current angle
-   time_in_step=millis()-g_show_step_start_time;
-   if(time_in_step<showStepList[g_show_step].duration) { // calculate intermediate angle
+   g_time_in_step=millis()-g_show_step_start_time;
+   if(g_time_in_step<showStepList[g_show_step].duration) { // calculate intermediate angle
         angle1000s_per_ms=(((long)(showStepList[g_show_step].angle_start-showStepList[g_show_step].angle_stop))<<10)/showStepList[g_show_step].duration; // Multiply by 1024 to get good resolution
-        g_servo_angle=showStepList[g_show_step].angle_start-(int)((angle1000s_per_ms*time_in_step)>>10);
+        g_servo_angle=showStepList[g_show_step].angle_start-(int)((angle1000s_per_ms*g_time_in_step)>>10);
    } else {
     g_servo_angle=showStepList[g_show_step].angle_stop;
     if(g_show_step==SHOW_STEP_COUNT-1) {
