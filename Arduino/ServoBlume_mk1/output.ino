@@ -55,7 +55,7 @@ void output_render_EditScene() {
 /* ********************** Scene helper ******************** */ 
 
 void output_display_step_progress() {
-  uint16_t pattern=0x0100;
+  uint16_t pattern=0xFF00;
   uint16_t shift_count=0;
   if(g_time_in_step<showStepList[g_show_step].duration) {
     shift_count=((g_time_in_step<<3)/showStepList[g_show_step].duration);
