@@ -10,7 +10,7 @@
 #endif
 
 
-#define PORT_STEP_BUTTON 6
+#define PORT_STEP_BUTTON 7
 
 /* general variables of the input module */
 bool input_enabled=true;

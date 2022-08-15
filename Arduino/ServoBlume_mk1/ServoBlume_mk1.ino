@@ -10,7 +10,7 @@
 //#define TRACE_INPUT_HIGH 
 #endif
 
-#define SERVO_CONTROL_PIN 9
+#define SERVO_CONTROL_PIN 6
 
 enum PROCESS_MODES {
   SHOW_MODE, 
@@ -25,7 +25,7 @@ unsigned long g_mode_start_time=0;
 
 
 Servo myServo;  // create a servo object
-TM1638plus ledAndKeymodule(2, 3, 4);  // the led+keys module is input and output, so core must own it
+TM1638plus ledAndKeymodule( 3,4,5);  // the led+keys module is input and output, so core must own it
 
 
 // Variable for Servo control and configuration
