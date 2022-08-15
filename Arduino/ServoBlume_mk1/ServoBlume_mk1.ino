@@ -146,6 +146,7 @@ void process_SHOW_MODE()
    if(input_moduleButtonGotPressed(3)) {  // TODO Change to Final switch button
     if(++g_show_step >= SHOW_STEP_COUNT) g_show_step=0;
     start_show_step(g_show_step);
+    return;
    }
 
    // Step Backward
