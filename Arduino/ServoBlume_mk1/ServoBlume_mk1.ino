@@ -7,6 +7,7 @@
 
 #ifdef TRACE_ON
 #define TRACE_MODES 
+#define INCLUDE_SERIAL_MODE
 //#define TRACE_INPUT_HIGH 
 #endif
 
@@ -14,7 +15,7 @@
 
 enum PROCESS_MODES {
   SHOW_MODE, 
-  SET_MODE,
+  EDIT_MODE,
   SERIAL_MODE,
   TEST_MODE
 };
@@ -47,17 +48,19 @@ struct showStep showStepList[] = {{0,39,500},  // Start step
 #define SHOW_STEP_COUNT (sizeof(showStepList)/sizeof(showStepList[0]))
 
 // Varibale for the show management
-byte g_show_step =0;
+int8_t g_show_step =0;
 unsigned long g_show_step_start_time=0;
 unsigned long g_time_in_step=0;
 
 enum EDIT_MODES {
-  EDIT_ANGLE,
+  EDIT_ANGLE_START,
+  EDIT_ANGLE_STOP,
   EDIT_DURATION,
   RUN_TEST_TO_STEP
 };
 
-EDIT_MODES g_edit_mode=EDIT_ANGLE;
+EDIT_MODES g_edit_mode=EDIT_ANGLE_STOP;
+int8_t  g_edit_step=0;
 
 void setup() {
   #ifdef TRACE_ON 
@@ -73,7 +76,7 @@ void setup() {
   myServo.attach(SERVO_CONTROL_PIN); // attaches the servo on pin 9 to the servo object
   g_servo_angle=90; // start at to middle position
   myServo.write(g_servo_angle);
-  enter_SERIAL_MODE();
+  enter_SHOW_MODE();
 
 }  
 
@@ -86,15 +89,17 @@ void loop() {
 
   switch(g_process_mode) {
     case SHOW_MODE: process_SHOW_MODE();break;
-    //case SET_MODE: process_SET_MODE();break;
-    case SERIAL_MODE:process_SERIAL_MODE();break;
+    case EDIT_MODE: process_EDIT_MODE();break;
+    #ifdef INCLUDE_SERIAL_MODE
+      case SERIAL_MODE:process_SERIAL_MODE();break;
+    #endif
     //case TEST_MODE:process_TEST_MODE();break;
    } // switch
 
    
 }
 
-/* ======== SHOW_MODE ======== */
+/* ======================== SHOW_MODE ======================== */
 
 void enter_SHOW_MODE()
 {
@@ -108,50 +113,174 @@ void enter_SHOW_MODE()
     g_process_mode=SHOW_MODE;
     g_mode_start_time=millis();
 
-    g_show_step=0;
+    g_show_step=SHOW_STEP_COUNT-1; // Start with a full release and buildup
     g_show_step_start_time=g_mode_start_time;
     g_time_in_step=0;
 }
 
 void process_SHOW_MODE()
 {
+   // -- Manage buttons --
 
-  
-   long angle1000s_per_ms=0;
+
+   if(input_moduleButtonIsPressed(0)) {  // Special Combos by holding button 1
+      // switch to edit mode
+      if(input_moduleButtonGotPressed(7)) {
+        input_ignoreUntilRelease();
+        enter_EDIT_MODE();
+        return;
+       }
     
-   // Goto Serial Mode
-   if(input_moduleButtonGotPressed(0)) {
-    input_ignoreUntilRelease();
-    enter_SERIAL_MODE();
-    return;
+      #ifdef INCLUDE_SERIAL_MODE
+       // Swtich to serial Mode
+       if(input_moduleButtonGotPressed(6)) {
+        input_ignoreUntilRelease();
+        enter_SERIAL_MODE();
+        return;
+       }
+      #endif
    }
 
+   
    // Step Foreward
    if(input_moduleButtonGotPressed(3)) {  // TODO Change to Final switch button
     if(++g_show_step >= SHOW_STEP_COUNT) g_show_step=0;
-    g_show_step_start_time=millis();
+    start_show_step(g_show_step);
    }
 
-   // Determine and set current angle
-   g_time_in_step=millis()-g_show_step_start_time;
-   if(g_time_in_step<showStepList[g_show_step].duration) { // calculate intermediate angle
-        angle1000s_per_ms=(((long)(showStepList[g_show_step].angle_start-showStepList[g_show_step].angle_stop))<<10)/showStepList[g_show_step].duration; // Multiply by 1024 to get good resolution
-        g_servo_angle=showStepList[g_show_step].angle_start-(int)((angle1000s_per_ms*g_time_in_step)>>10);
-   } else {
-    g_servo_angle=showStepList[g_show_step].angle_stop;
-    if(g_show_step==SHOW_STEP_COUNT-1) {
-      g_show_step=0;
-      g_show_step_start_time=millis();
-      }
+   // Step Backward
+   if(input_moduleButtonGroupGotPressed(0xFE)) // all buttons but 1
+   {
+    if(--g_show_step >=0) end_show_step(g_show_step);
+    else start_show_step(0);
    }
 
-   myServo.write(g_servo_angle);
+   // --  Animate --
+   drive_animation();
+
+   // after final step finished goto to step 0 autmatically
+   if(g_show_step==SHOW_STEP_COUNT-1) {
+     if(g_time_in_step>=showStepList[g_show_step].duration) { // When step is over
+          start_show_step(0);
+          }
+   }
    
-  // display state 
+  // -- display state --
   output_render_ShowScene();
 }
 
-/* ======== SERIAL_MODE ========*/
+/* ======================== EDIT_MODE ======================== 
+  EDIT_ANGLE,
+  EDIT_DURATION,
+  RUN_TEST_TO_STEP */
+
+void enter_EDIT_MODE()
+{
+   #ifdef TRACE_MODES
+      Serial.print(F("#EDIT_MODE: "));
+      Serial.print(freeMemory());
+      Serial.print(F(" bytes free memory. "));
+      Serial.print(millis()/1000);
+      Serial.println(F(" seconds uptime"));
+    #endif
+    g_process_mode=EDIT_MODE;
+    g_mode_start_time=millis();
+
+    g_edit_step=0;
+    start_show_step(g_edit_step); // we start at step 0 
+    g_edit_mode=RUN_TEST_TO_STEP;
+    
+}
+
+void process_EDIT_MODE()
+{
+   // -- Manage buttons --
+
+   // exit EDIT
+   if(input_moduleButtonGroupIsPressed(0x03) &&  input_moduleButtonsStateDuration() >2000) {
+      input_ignoreUntilRelease();
+      enter_SHOW_MODE();
+      return;
+   }
+   
+   // Step Foreward
+   if(input_moduleButtonGotPressed(0)) {  
+    if(++g_edit_step >= SHOW_STEP_COUNT) g_edit_step=0;
+    start_show_step(g_edit_step);
+    g_edit_mode=RUN_TEST_TO_STEP;
+   }
+
+   // Step backward
+   if(input_moduleButtonGotPressed(1)) {  
+    if(--g_edit_step <0) g_edit_step=SHOW_STEP_COUNT-1;
+    end_show_step(g_edit_step);
+    g_edit_mode=RUN_TEST_TO_STEP;
+   }
+
+   // change parameters
+   switch(g_edit_mode) {
+    case RUN_TEST_TO_STEP:
+    case EDIT_ANGLE_START:
+    case EDIT_ANGLE_STOP:
+               if(input_moduleButtonGotPressed(2)) {  
+                g_edit_mode=EDIT_ANGLE_START;
+                if(++showStepList[g_edit_step].angle_start>179)showStepList[g_edit_step].angle_start=179;
+                myServo.write(showStepList[g_edit_step].angle_start);
+               }
+               if(input_moduleButtonGotPressed(3)) {  
+                g_edit_mode=EDIT_ANGLE_START;
+                if(--showStepList[g_edit_step].angle_start<0)showStepList[g_edit_step].angle_start=0;
+                myServo.write(showStepList[g_edit_step].angle_start);
+               }
+               if(input_moduleButtonGotPressed(6)) {  
+                g_edit_mode=EDIT_ANGLE_STOP;
+                if(++showStepList[g_edit_step].angle_stop>179)showStepList[g_edit_step].angle_stop=179;
+                myServo.write(showStepList[g_edit_step].angle_stop);
+               }
+               if(input_moduleButtonGotPressed(7)) {  
+                g_edit_mode=EDIT_ANGLE_STOP;
+                if(--showStepList[g_edit_step].angle_stop<0)showStepList[g_edit_step].angle_stop=0;
+                myServo.write(showStepList[g_edit_step].angle_stop);
+               }
+               if(input_moduleButtonGotPressed(4)) {  
+                  g_edit_mode=EDIT_DURATION;
+               }
+               break;
+    case EDIT_DURATION:
+               if(input_moduleButtonGotPressed(6)) {  
+                g_edit_mode=EDIT_DURATION;
+                showStepList[g_edit_step].duration+=250;
+                if(showStepList[g_edit_step].duration>20000)showStepList[g_edit_step].duration=20000;
+               }
+               if(input_moduleButtonGotPressed(7)) {  
+                g_edit_mode=EDIT_DURATION;
+                showStepList[g_edit_step].duration-=250;
+                if(showStepList[g_edit_step].duration<250)showStepList[g_edit_step].duration=250;
+               }
+              if(input_moduleButtonGotPressed(4)) {  // Switch run step and switch to angle mode
+                myServo.write(showStepList[g_edit_step].angle_start);
+                delay(200);
+                start_show_step(g_edit_step);
+                g_edit_mode=RUN_TEST_TO_STEP;
+              }
+               break;
+   }
+   
+   // --  Animate --
+   if(g_edit_mode == RUN_TEST_TO_STEP) {
+       drive_animation();
+       if(g_edit_step> g_show_step && g_time_in_step>=showStepList[g_show_step].duration){ // Test has not reached edit step to autoforeward
+           delay(500);
+          start_show_step(g_show_step+1);
+       }
+   }
+   
+   output_render_EditScene();
+     
+}
+
+#ifdef INCLUDE_SERIAL_MODE
+/* ======================== SERIAL_MODE ========================*/
 
 void enter_SERIAL_MODE()
 {
@@ -191,7 +320,35 @@ void process_SERIAL_MODE()
    // Finally display state 
   output_render_SerialScene();
 }
+#endif
 
+/* ======== animation utility function ========*/
+
+void start_show_step(int8_t step_index) {
+   if (step_index<0 || step_index>=SHOW_STEP_COUNT) return;
+   g_show_step=step_index;
+   g_show_step_start_time=millis();
+}
+
+void end_show_step(int8_t step_index) {
+   if (step_index<0 || step_index>=SHOW_STEP_COUNT) return;
+   g_show_step=step_index;
+   g_show_step_start_time=millis()-showStepList[g_show_step].duration;
+}
+
+void drive_animation() {
+   long angle1000s_per_ms=0;
+     
+   // Determine and set current angle for running step
+   g_time_in_step=millis()-g_show_step_start_time;
+   if(g_time_in_step<showStepList[g_show_step].duration) { // calculate intermediate angle
+        angle1000s_per_ms=(((long)(showStepList[g_show_step].angle_start-showStepList[g_show_step].angle_stop))<<10)/showStepList[g_show_step].duration; // Multiply by 1024 to get good resolution
+        g_servo_angle=showStepList[g_show_step].angle_start-(int)((angle1000s_per_ms*g_time_in_step)>>10);
+   } else {
+    g_servo_angle=showStepList[g_show_step].angle_stop;
+   }
+   myServo.write(g_servo_angle);
+}
 
 /* ******************** Memory Helper *************** */
  

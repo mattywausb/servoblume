@@ -15,6 +15,7 @@
 /* general variables of the input module */
 bool input_enabled=true;
 
+
 /* TM1638 Button management variables */
 
 TM1638plus *buttonModule;
@@ -23,6 +24,7 @@ byte buttons_last_state = 0;
 byte buttons_gotPressed_flag = 0;
 byte buttons_gotReleased_flag = 0;
 unsigned long buttons_last_read_time = 0;
+unsigned long buttons_state_start_time=0;
 #define BUTTON_MODULE_COOLDOWN_MS 10
 
 /* Serial input management */
@@ -53,9 +55,25 @@ bool input_moduleButtonGotPressed(byte buttonIndex)
   return input_enabled && bitRead(buttons_gotPressed_flag, buttonIndex); 
 }
 
+bool input_moduleButtonGroupGotPressed(byte buttons_of_interest_pattern)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && (buttons_gotPressed_flag&buttons_of_interest_pattern)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled buttongroup got pressed for "));
+         Serial.println(buttons_of_interest_pattern,HEX);
+    }
+  #endif
+  return input_enabled && (buttons_gotPressed_flag & buttons_of_interest_pattern); 
+}
+
 bool input_moduleButtonIsPressed(byte buttonIndex)
 {
   return input_enabled && bitRead(buttons_current_state,buttonIndex);
+}
+
+bool input_moduleButtonGroupIsPressed(byte buttons_of_interest_pattern)
+{
+  return input_enabled && (buttons_current_state & buttons_of_interest_pattern);
 }
 
 bool input_moduleButtonGotReleased(byte buttonIndex)
@@ -69,6 +87,10 @@ bool input_moduleButtonGotReleased(byte buttonIndex)
   return input_enabled && bitRead(buttons_gotReleased_flag,buttonIndex); 
 }
 
+unsigned long input_moduleButtonsStateDuration()  // return the time in ms , the current press state exists
+{
+  return millis()-buttons_state_start_time;
+}
 
 /* ---- Serial Data Input function ---- */
 
@@ -117,6 +139,7 @@ void input_switches_scan_tick() {
   {
     buttons_current_state = buttonModule->readButtons();
     buttons_last_read_time = millis();
+    if(buttons_last_state!=buttons_current_state) buttons_state_start_time=buttons_last_read_time; // reset change timer
   }
   // derive state change information for the button module 
   buttons_gotPressed_flag = (buttons_last_state ^ buttons_current_state)&buttons_current_state;

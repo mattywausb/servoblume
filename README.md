@@ -44,13 +44,12 @@ When entering configuration mode, the flower will go to the start position (play
 #### Operations
 
 Flower will react immedatly 
-* press **Button 1/2** to increase/decrease **step number** (increase will play step immedately, decrease will configure target angle)
-* press **Step Button** to increase **step number** (will play step immedately)
+* press **Button 1/2** to increase/decrease **step number** (increase will play step immedately, decrease will configure target angle of the step6)
+* press **Step Button** to Start from beginning and run until current step (will play step immedately)
 * press **Button 3/4** to increase/decrease **start angle** by 1 degree. Hold to fast foreward. 
 * press **Button 7/8** to increase/decrease **stop angle**. Hold to fast foreward.
 * press **Button 5** to switch between **angle setup<->duration setup** 
 * press **Button 7/8** to increase/decrease **animation duration** by 100ms. Hold to fast foreward.
-* press **Button 6** to test step (go to end value of prev step, wait 1 second, play animation)
 * press **Button 1+2 for 2 seconds" to go into **Show Mode**
 
 

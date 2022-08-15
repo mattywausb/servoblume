@@ -2,7 +2,7 @@
 #include <TM1638plus.h>
 
 #ifdef TRACE_ON
-
+  #define INCLUDE_SERIAL_MODE
 #endif
 
 TM1638plus *output_led_module;
@@ -29,6 +29,27 @@ void output_render_ShowScene() {
 }
 
 
+/* ********************** Edit Scene ******************** */ 
+
+void output_render_EditScene() {
+   char stringBuffer[9];
+   switch(g_edit_mode) {
+    case EDIT_ANGLE_START:     sprintf(stringBuffer, "%1d.%03d %03d",g_edit_step,showStepList[g_edit_step].angle_start,showStepList[g_edit_step].angle_stop);
+                              output_led_module->setLEDs(0x0e00);
+                              break;
+    case EDIT_ANGLE_STOP:     sprintf(stringBuffer, "%1d.%03d %03d",g_edit_step,showStepList[g_edit_step].angle_start,showStepList[g_edit_step].angle_stop);
+                              output_led_module->setLEDs(0xe000);
+                               break;
+    case EDIT_DURATION:  sprintf(stringBuffer, "%1d  %05d",g_edit_step,showStepList[g_edit_step].duration);
+                              output_led_module->setLEDs(0xf800);
+                    break;
+    case RUN_TEST_TO_STEP: sprintf(stringBuffer, "%1d.%03d %03d",g_show_step,showStepList[g_show_step].angle_start,showStepList[g_show_step].angle_stop);
+                    output_display_step_progress();
+                    break;
+    default: sprintf(stringBuffer, "-_-_-_-_");
+   }
+   output_led_module->displayText(stringBuffer);
+}
 
 
 /* ********************** Scene helper ******************** */ 
@@ -44,6 +65,7 @@ void output_display_step_progress() {
   
 }
 
+#ifdef INCLUDE_SERIAL_MODE
 /* ********************** Serial Scene ******************** */ 
 
 void output_render_SerialScene() {
@@ -52,3 +74,4 @@ void output_render_SerialScene() {
    output_led_module->displayText(stringBuffer);
 }
 
+#endif
