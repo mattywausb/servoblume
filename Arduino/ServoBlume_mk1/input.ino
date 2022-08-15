@@ -60,6 +60,57 @@ void input_setup(TM1638plus *buttonModuleToUse) {
 
 }
 
+/* -------- Switch query functions ----------- */
+
+bool input_switchGotPressed(byte buttonIndex)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && bitRead(input_switch_gotPressed_flag, buttonIndex)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled input_switch got pressed for "));
+         Serial.println(buttonIndex);
+    }
+  #endif
+  return input_enabled && bitRead(input_switch_gotPressed_flag, buttonIndex); 
+}
+
+bool input_switchGroupGotPressed(byte input_switch_of_interest_pattern)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && (input_switch_gotPressed_flag&input_switch_of_interest_pattern)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled input_switchgroup got pressed for "));
+         Serial.println(input_switch_of_interest_pattern,HEX);
+    }
+  #endif
+  return input_enabled && (input_switch_gotPressed_flag & input_switch_of_interest_pattern); 
+}
+
+bool input_switchIsPressed(byte buttonIndex)
+{
+  return input_enabled && bitRead(input_switch_current_state,buttonIndex);
+}
+
+bool input_switchGroupIsPressed(byte input_switch_of_interest_pattern)
+{
+  return input_enabled && (input_switch_current_state & input_switch_of_interest_pattern);
+}
+
+bool input_switchGotReleased(byte buttonIndex)
+{
+  #ifdef TRACE_INPUT_EVENTS
+    if(input_enabled && bitRead(input_switch_gotReleased_flag, buttonIndex)) {
+         Serial.print(F("TRACE_INPUT_EVENTS signalled input_switch got released for "));
+         Serial.println(buttonIndex);
+    }
+  #endif
+  return input_enabled && bitRead(input_switch_gotReleased_flag,buttonIndex); 
+}
+
+unsigned long input_switchStateDuration()  // return the time in ms , the current press state exists
+{
+  return millis()-input_switch_state_start_time;
+}
+
+
 
 /* -------- Button query functions ----------- */
 

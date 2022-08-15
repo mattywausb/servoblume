@@ -13,6 +13,27 @@
 
 #define SERVO_CONTROL_PIN 6
 
+#define SWITCH_INDEX_FOR_STEP 0
+
+#define BUTTON_INDEX_FOR_COMBO 0
+#define BUTTON_INDEX_FOR_EDITMODE 7
+#define BUTTON_INDEX_FOR_SERIAL 5
+
+#define BUTTON_INDEX_FOR_STEP_FOREWARD 0
+#define BUTTON_INDEX_FOR_STEP_BACKWARD 1
+#define BUTTON_INDEX_FOR_ANGLE_START_PLUS 2
+#define BUTTON_INDEX_FOR_ANGLE_START_MINUS 3
+#define BUTTON_INDEX_FOR_ANGLE_STOP_PLUS 6
+#define BUTTON_INDEX_FOR_ANGLE_STOP_MINUS 7
+#define BUTTON_INDEX_FOR_DURATION_PLUS 6
+#define BUTTON_INDEX_FOR_DURATION_MINUS 7
+#define BUTTON_INDEX_FOR_EDIT_MODE_CHANGE 4
+
+#define BUTTON_GROUP_FOR_STEP_BACKWARD 0xFE 
+#define BUTTON_GROUP_FOR_LEAVE_EDIT 0x81
+
+
+
 enum PROCESS_MODES {
   SHOW_MODE, 
   EDIT_MODE,
@@ -123,9 +144,9 @@ void process_SHOW_MODE()
    // -- Manage buttons --
 
 
-   if(input_moduleButtonIsPressed(0)) {  // Special Combos by holding button 1
+   if(input_moduleButtonIsPressed(BUTTON_INDEX_FOR_COMBO)) {  // Special Combos by holding button 1
       // switch to edit mode
-      if(input_moduleButtonGotPressed(7)) {
+      if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_EDITMODE)) {
         input_ignoreUntilRelease();
         enter_EDIT_MODE();
         return;
@@ -133,7 +154,7 @@ void process_SHOW_MODE()
     
       #ifdef INCLUDE_SERIAL_MODE
        // Swtich to serial Mode
-       if(input_moduleButtonGotPressed(6)) {
+       if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_SERIAL)) {
         input_ignoreUntilRelease();
         enter_SERIAL_MODE();
         return;
@@ -143,14 +164,14 @@ void process_SHOW_MODE()
 
    
    // Step Foreward
-   if(input_moduleButtonGotPressed(3)) {  // TODO Change to Final switch button
+   if(input_switchGotPressed(SWITCH_INDEX_FOR_STEP)) {  
     if(++g_show_step >= SHOW_STEP_COUNT) g_show_step=0;
     start_show_step(g_show_step);
     return;
    }
 
    // Step Backward
-   if(input_moduleButtonGroupGotPressed(0xFE)) // all buttons but 1
+   if(input_moduleButtonGroupGotPressed(BUTTON_GROUP_FOR_STEP_BACKWARD)) 
    {
     if(--g_show_step >=0) end_show_step(g_show_step);
     else start_show_step(0);
@@ -198,21 +219,21 @@ void process_EDIT_MODE()
    // -- Manage buttons --
 
    // exit EDIT
-   if(input_moduleButtonGroupIsPressed(0x03) &&  input_moduleButtonsStateDuration() >2000) {
+   if(input_moduleButtonGroupIsPressed(BUTTON_GROUP_FOR_LEAVE_EDIT) &&  input_moduleButtonsStateDuration() >2000) {
       input_ignoreUntilRelease();
       enter_SHOW_MODE();
       return;
    }
    
    // Step Foreward
-   if(input_moduleButtonGotPressed(0)) {  
+   if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_STEP_FOREWARD)) {  
     if(++g_edit_step >= SHOW_STEP_COUNT) g_edit_step=0;
     start_show_step(g_edit_step);
     g_edit_mode=RUN_TEST_TO_STEP;
    }
 
    // Step backward
-   if(input_moduleButtonGotPressed(1)) {  
+   if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_STEP_BACKWARD)) {  
     if(--g_edit_step <0) g_edit_step=SHOW_STEP_COUNT-1;
     end_show_step(g_edit_step);
     g_edit_mode=RUN_TEST_TO_STEP;
@@ -223,42 +244,42 @@ void process_EDIT_MODE()
     case RUN_TEST_TO_STEP:
     case EDIT_ANGLE_START:
     case EDIT_ANGLE_STOP:
-               if(input_moduleButtonGotPressed(2)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_START_PLUS)) {  
                 g_edit_mode=EDIT_ANGLE_START;
                 if(++showStepList[g_edit_step].angle_start>179)showStepList[g_edit_step].angle_start=179;
                 myServo.write(showStepList[g_edit_step].angle_start);
                }
-               if(input_moduleButtonGotPressed(3)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_START_MINUS)) {  
                 g_edit_mode=EDIT_ANGLE_START;
                 if(--showStepList[g_edit_step].angle_start<0)showStepList[g_edit_step].angle_start=0;
                 myServo.write(showStepList[g_edit_step].angle_start);
                }
-               if(input_moduleButtonGotPressed(6)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_STOP_PLUS)) {  
                 g_edit_mode=EDIT_ANGLE_STOP;
                 if(++showStepList[g_edit_step].angle_stop>179)showStepList[g_edit_step].angle_stop=179;
                 myServo.write(showStepList[g_edit_step].angle_stop);
                }
-               if(input_moduleButtonGotPressed(7)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_STOP_MINUS)) {  
                 g_edit_mode=EDIT_ANGLE_STOP;
                 if(--showStepList[g_edit_step].angle_stop<0)showStepList[g_edit_step].angle_stop=0;
                 myServo.write(showStepList[g_edit_step].angle_stop);
                }
-               if(input_moduleButtonGotPressed(4)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_EDIT_MODE_CHANGE)) {  
                   g_edit_mode=EDIT_DURATION;
                }
                break;
     case EDIT_DURATION:
-               if(input_moduleButtonGotPressed(6)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_DURATION_PLUS)) {  
                 g_edit_mode=EDIT_DURATION;
                 showStepList[g_edit_step].duration+=250;
                 if(showStepList[g_edit_step].duration>20000)showStepList[g_edit_step].duration=20000;
                }
-               if(input_moduleButtonGotPressed(7)) {  
+               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_DURATION_MINUS)) {  
                 g_edit_mode=EDIT_DURATION;
                 showStepList[g_edit_step].duration-=250;
                 if(showStepList[g_edit_step].duration<250)showStepList[g_edit_step].duration=250;
                }
-              if(input_moduleButtonGotPressed(4)) {  // Switch run step and switch to angle mode
+              if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_EDIT_MODE_CHANGE)) {  // Switch run step and switch to angle mode
                 myServo.write(showStepList[g_edit_step].angle_start);
                 delay(200);
                 start_show_step(g_edit_step);
