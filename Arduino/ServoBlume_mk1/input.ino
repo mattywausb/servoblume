@@ -143,7 +143,7 @@ bool input_moduleButtonIsPressed(byte buttonIndex)
 
 bool input_moduleButtonGroupIsPressed(byte modButtons_of_interest_pattern)
 {
-  return input_enabled && (modButtons_current_state & modButtons_of_interest_pattern);
+  return input_enabled && ((modButtons_current_state & modButtons_of_interest_pattern)==modButtons_of_interest_pattern);
 }
 
 bool input_moduleButtonGotReleased(byte buttonIndex)

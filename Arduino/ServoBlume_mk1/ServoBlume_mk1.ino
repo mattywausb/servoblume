@@ -16,7 +16,7 @@
 #define SWITCH_INDEX_FOR_STEP 0
 
 #define BUTTON_INDEX_FOR_COMBO 0
-#define BUTTON_INDEX_FOR_EDITMODE 7
+#define BUTTON_INDEX_FOR_EDITMODE 5
 #define BUTTON_INDEX_FOR_SERIAL 5
 
 #define BUTTON_INDEX_FOR_STEP_FOREWARD 0
@@ -30,7 +30,7 @@
 #define BUTTON_INDEX_FOR_EDIT_MODE_CHANGE 4
 
 #define BUTTON_GROUP_FOR_STEP_BACKWARD 0xFE 
-#define BUTTON_GROUP_FOR_LEAVE_EDIT 0x81
+#define BUTTON_GROUP_FOR_LEAVE_EDIT 0x21
 
 
 
@@ -219,7 +219,7 @@ void process_EDIT_MODE()
    // -- Manage buttons --
 
    // exit EDIT
-   if(input_moduleButtonGroupIsPressed(BUTTON_GROUP_FOR_LEAVE_EDIT) &&  input_moduleButtonsStateDuration() >2000) {
+   if(input_moduleButtonGroupIsPressed(BUTTON_GROUP_FOR_LEAVE_EDIT) ) {
       input_ignoreUntilRelease();
       enter_SHOW_MODE();
       return;

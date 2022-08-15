@@ -30,9 +30,9 @@ After Powering up, the flower will start by resetting and go to the start positi
 * the final step will automatically switch to the start step when animation is finished
 
 #### Special Operations while holding button 1
-* press **button 8** , to switch to the **configuration mode**.
-* press **button 3** to **save** the current settings and start again
-* press **button 6** to **load** the previous settings and start again
+* press **button 6** , to switch to the **configuration mode**.
+* press **button 8** to **save** the current settings and start again
+* press **button 3** to **load** the previous settings and start again
 
 ### configuration mode
 When entering configuration mode, the flower will go to the start position (play step 0).
@@ -49,7 +49,7 @@ Flower will react immedatly
 * press **Button 3/4** to increase/decrease **start angle** by 1 degree. Hold to fast foreward. 
 * press **Button 7/8** to increase/decrease **stop angle**. Hold to fast foreward.
 * press **Button 5** to switch between **angle setup<->duration setup** 
-* press **Button 7/8** to increase/decrease **animation duration** by 100ms. Hold to fast foreward.
-* press **Button 1+2 for 2 seconds" to go into **Show Mode**
+* press **Button 7/8** to increase/decrease **animation duration** by 250ms. Hold to fast foreward.
+* press **Button 1+6  go into **Show Mode**
 
 
