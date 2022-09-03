@@ -2,6 +2,7 @@
 */
 
 #include "mainsettings.h"
+#include "EepromDB.h"
 #include <Servo.h>
 #include <TM1638plus.h>
 
@@ -9,6 +10,7 @@
 #define TRACE_MODES 
 #define INCLUDE_SERIAL_MODE
 //#define TRACE_INPUT_HIGH 
+//#define TRACE_DB
 #endif
 
 #define SERVO_CONTROL_PIN 6
@@ -17,10 +19,12 @@
 
 #define BUTTON_INDEX_FOR_COMBO 0
 #define BUTTON_INDEX_FOR_EDITMODE 5
-#define BUTTON_INDEX_FOR_SERIAL 5
+#define BUTTON_INDEX_FOR_SERIAL 6
+#define BUTTON_INDEX_FOR_LOAD 2
+#define BUTTON_INDEX_FOR_SAVE 7
 
-#define BUTTON_INDEX_FOR_STEP_FOREWARD 0
-#define BUTTON_INDEX_FOR_STEP_BACKWARD 1
+#define BUTTON_INDEX_FOR_STEP_FOREWARD 1
+#define BUTTON_INDEX_FOR_STEP_BACKWARD 0
 #define BUTTON_INDEX_FOR_ANGLE_START_PLUS 2
 #define BUTTON_INDEX_FOR_ANGLE_START_MINUS 3
 #define BUTTON_INDEX_FOR_ANGLE_STOP_PLUS 6
@@ -30,7 +34,7 @@
 #define BUTTON_INDEX_FOR_EDIT_MODE_CHANGE 4
 
 #define BUTTON_GROUP_FOR_STEP_BACKWARD 0xFE 
-#define BUTTON_GROUP_FOR_LEAVE_EDIT 0x21
+#define BUTTON_GROUP_FOR_LEAVE_EDIT 0x30
 
 
 
@@ -68,6 +72,13 @@ struct showStep showStepList[] = {{0,39,500},  // Start step
 
 #define SHOW_STEP_COUNT (sizeof(showStepList)/sizeof(showStepList[0]))
 
+// Variables for save/load feature
+
+struct showStep current_db_record[SHOW_STEP_COUNT];
+EepromDB eepromDB;
+boolean g_settings_are_saved=false;
+
+
 // Varibale for the show management
 int8_t g_show_step =0;
 unsigned long g_show_step_start_time=0;
@@ -97,6 +108,20 @@ void setup() {
   myServo.attach(SERVO_CONTROL_PIN); // attaches the servo on pin 9 to the servo object
   g_servo_angle=90; // start at to middle position
   myServo.write(g_servo_angle);
+
+  
+  if(eepromDB.setupDB(1, sizeof(current_db_record), 20)) {
+    #ifdef TRACE_DB 
+      eepromDB.dumpToSerial();
+    #endif
+      loadSettings();
+    }
+   #ifdef TRACE_ON
+    else {
+      Serial.println(F("TRACE_ON> ### DB INIT ERROR ###")); 
+    }
+   #endif
+
   enter_SHOW_MODE();
 
 }  
@@ -118,6 +143,30 @@ void loop() {
    } // switch
 
    
+}
+
+void saveSettings() {
+  memcpy(current_db_record,showStepList,sizeof(current_db_record));
+  if(eepromDB.updateRecord((byte*)(&current_db_record))) {
+    g_settings_are_saved=true;
+    #ifdef TRACE_ON
+       Serial.println(F("TRACE_ON> Settings saved")); 
+    #endif
+  }
+}
+
+void loadSettings() {
+      if(eepromDB.readRecord((byte*)(&current_db_record)))
+      {    
+      memcpy(showStepList,current_db_record,sizeof(showStepList));
+      g_settings_are_saved=true;
+      #ifdef TRACE_DB
+        Serial.println(F("TRACE_DB> Settings loaded")); 
+      #endif
+      } 
+      #ifdef TRACE_ON
+        else   Serial.println(F("TRACE_ON> NO DB RECORD FOUND. USING HARD CODED START VALUES ")); 
+      #endif
 }
 
 /* ======================== SHOW_MODE ======================== */
@@ -151,6 +200,18 @@ void process_SHOW_MODE()
         enter_EDIT_MODE();
         return;
        }
+
+      if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_SAVE)) {
+        input_ignoreUntilRelease();
+        saveSettings();
+        return;
+      }
+
+      if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_LOAD)) {
+        input_ignoreUntilRelease();
+        loadSettings();
+        return;
+      }
     
       #ifdef INCLUDE_SERIAL_MODE
        // Swtich to serial Mode
@@ -247,21 +308,25 @@ void process_EDIT_MODE()
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_START_PLUS)) {  
                 g_edit_mode=EDIT_ANGLE_START;
                 if(++showStepList[g_edit_step].angle_start>179)showStepList[g_edit_step].angle_start=179;
+                else g_settings_are_saved=false;
                 myServo.write(showStepList[g_edit_step].angle_start);
                }
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_START_MINUS)) {  
                 g_edit_mode=EDIT_ANGLE_START;
                 if(--showStepList[g_edit_step].angle_start<0)showStepList[g_edit_step].angle_start=0;
+                else g_settings_are_saved=false;
                 myServo.write(showStepList[g_edit_step].angle_start);
                }
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_STOP_PLUS)) {  
                 g_edit_mode=EDIT_ANGLE_STOP;
                 if(++showStepList[g_edit_step].angle_stop>179)showStepList[g_edit_step].angle_stop=179;
+                else g_settings_are_saved=false;
                 myServo.write(showStepList[g_edit_step].angle_stop);
                }
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_ANGLE_STOP_MINUS)) {  
                 g_edit_mode=EDIT_ANGLE_STOP;
                 if(--showStepList[g_edit_step].angle_stop<0)showStepList[g_edit_step].angle_stop=0;
+                else g_settings_are_saved=false;
                 myServo.write(showStepList[g_edit_step].angle_stop);
                }
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_EDIT_MODE_CHANGE)) {  
@@ -273,11 +338,13 @@ void process_EDIT_MODE()
                 g_edit_mode=EDIT_DURATION;
                 showStepList[g_edit_step].duration+=250;
                 if(showStepList[g_edit_step].duration>20000)showStepList[g_edit_step].duration=20000;
+                else g_settings_are_saved=false;
                }
                if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_DURATION_MINUS)) {  
                 g_edit_mode=EDIT_DURATION;
                 showStepList[g_edit_step].duration-=250;
                 if(showStepList[g_edit_step].duration<250)showStepList[g_edit_step].duration=250;
+                else g_settings_are_saved=false;
                }
               if(input_moduleButtonGotPressed(BUTTON_INDEX_FOR_EDIT_MODE_CHANGE)) {  // Switch run step and switch to angle mode
                 myServo.write(showStepList[g_edit_step].angle_start);
