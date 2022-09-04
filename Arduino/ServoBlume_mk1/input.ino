@@ -25,7 +25,7 @@ byte input_switch_gotPressed_flag = 0;
 byte input_switch_gotReleased_flag = 0;
 unsigned long input_switch_last_read_time = 0;
 unsigned long input_switch_state_start_time=0;
-#define INPUT_SWITCH_COOLDOWN_MS 10
+#define INPUT_SWITCH_COOLDOWN_MS 100
 
 
 /* TM1638 Button management variables */
@@ -37,7 +37,7 @@ byte modButtons_gotPressed_flag = 0;
 byte modButtons_gotReleased_flag = 0;
 unsigned long modButtons_last_read_time = 0;
 unsigned long modButtons_state_start_time=0;
-#define MODBUTTONS_COOLDOWN_MS 10
+#define MODBUTTONS_COOLDOWN_MS 100
 
 /* Serial input management */
 String input_serialBuffer="";
